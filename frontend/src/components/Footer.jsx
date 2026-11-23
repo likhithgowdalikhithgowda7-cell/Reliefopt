@@ -17,10 +17,6 @@ export default function Footer() {
               <div className="footer-tagline">Emergency Relief Supply Distribution</div>
             </div>
           </div>
-
-          <div className="footer-academic-badge">
-            ReliefOpt v1.0.0
-          </div>
         </div>
 
         <div className="footer-bottom">

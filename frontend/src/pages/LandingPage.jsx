@@ -1,6 +1,5 @@
 import React, { useState } from 'react';
 import Hero from '../components/Hero';
-import ConnectionStatus from '../components/ConnectionStatus';
 import ProjectOverview from '../components/ProjectOverview';
 import WorkflowPreview from '../components/WorkflowPreview';
 import TechStack from '../components/TechStack';
@@ -30,18 +29,6 @@ export default function LandingPage({
             }
           }}
         />
-
-        {/* Diagnostic health connection banner */}
-        <div className="container connection-status-wrapper">
-          <ConnectionStatus
-            status={status}
-            healthData={healthData}
-            error={error}
-            endpointUrl={endpointUrl || 'http://127.0.0.1:8000/health'}
-            onRetry={performHealthCheck}
-            isChecking={isChecking}
-          />
-        </div>
 
         {/* Core Capabilities */}
         <ProjectOverview />

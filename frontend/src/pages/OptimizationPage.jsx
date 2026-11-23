@@ -97,19 +97,12 @@ export default function OptimizationPage({ onNavigate, showNotification }) {
     setLoadingCosts(false);
   }, []);
 
-  // Load historical runs and optionally auto-select the latest
-  const fetchRuns = useCallback(async (autoSelectLatest = false) => {
+  // Load historical runs
+  const fetchRuns = useCallback(async () => {
     setLoadingRuns(true);
     const res = await optimizationApi.getRuns({ limit: 50 });
     if (res.success && res.data) {
       setRunsList(res.data);
-      if (autoSelectLatest && res.data.length > 0) {
-        const latestRunId = res.data[0].run_id;
-        const planRes = await optimizationApi.getRun(latestRunId);
-        if (planRes.success && planRes.data) {
-          setCurrentPlan(planRes.data);
-        }
-      }
     }
     setLoadingRuns(false);
   }, []);
@@ -127,7 +120,7 @@ export default function OptimizationPage({ onNavigate, showNotification }) {
   useEffect(() => {
     fetchOverview();
     fetchCosts();
-    fetchRuns(true);
+    fetchRuns();
     fetchDropdowns();
   }, [fetchOverview, fetchCosts, fetchRuns, fetchDropdowns]);
 
@@ -862,11 +855,6 @@ export default function OptimizationPage({ onNavigate, showNotification }) {
                       <li><strong>Critical Supply Floor:</strong> <code>u_{'{v,s}'} == 0</code> for Critical demands whenever <code>TotalStock_s &gt;= TotalCriticalDemand_s</code> — Guarantees life-saving critical supplies cannot be sacrificed for routing cost savings.</li>
                       <li><strong>Non-negativity:</strong> <code>x_{'{w,v,s}'} &gt;= 0, u_{'{v,s}'} &gt;= 0</code> — Prohibits negative allocations and phantom shipments.</li>
                     </ul>
-                  </div>
-
-                  {/* Explicit Fairness Disclaimer */}
-                  <div style={{ background: '#fffbeb', border: '1px solid #fef3c7', padding: '10px 14px', borderRadius: 'var(--radius-sm)', fontSize: '0.82rem', color: '#92400e', lineHeight: '1.45' }}>
-                    <strong>Fairness Disclaimer:</strong> Minimum-cost optimization prioritizes urgency and logistics efficiency, but does NOT mathematically guarantee geographical equality across locations. Fairness metrics (Gini coefficient, Hoover index, Disparity Gap) provide post-solve descriptive evaluation to support human decision-making.
                   </div>
                 </div>
 
