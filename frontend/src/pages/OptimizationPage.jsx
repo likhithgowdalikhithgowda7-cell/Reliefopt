@@ -726,19 +726,6 @@ export default function OptimizationPage({ onNavigate, showNotification }) {
                       )}
                     </div>
 
-                    {/* Methodological Distinction Callout */}
-                    <div style={{ background: '#f8fafc', padding: '12px 16px', borderRadius: 'var(--radius-sm)', borderLeft: '4px solid #2563eb', marginBottom: '16px', fontSize: '0.85rem', color: 'var(--navy-700)' }}>
-                      <strong style={{ color: 'var(--navy-900)', display: 'block', marginBottom: '4px' }}>
-                        Methodological Distinction: Optimization Objective vs. Fairness Evaluation
-                      </strong>
-                      <div style={{ marginBottom: '4px', lineHeight: '1.45' }}>
-                        • <strong>Mathematical Optimization Objective:</strong> The Google OR-Tools Mixed-Integer Linear Program (MILP) solver minimizes total unmet demand penalties scaled strictly by urgency (<code>Critical (1,000,000x) &gt;&gt; High (100,000x) &gt;&gt; Medium (10,000x) &gt;&gt; Low (1,000x)</code>) plus route transportation costs under warehouse inventory upper bounds, village demand conservation, and critical supply guarantees.
-                      </div>
-                      <div style={{ lineHeight: '1.45' }}>
-                        • <strong>Post-Solve Fairness Evaluation:</strong> An independent descriptive evaluation that computes distribution equity indicators (Gini coefficient, Hoover Robin Hood index, average village satisfaction, minimum fulfilment, and disparity gap) across all affected villages to assist human coordinators in auditing fairness under resource scarcity.
-                      </div>
-                    </div>
-
                     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '16px', marginBottom: '16px' }}>
                       <div style={{ background: 'var(--slate-50)', padding: '14px', borderRadius: 'var(--radius-sm)', border: '1px solid var(--slate-200)' }}>
                         <div style={{ fontSize: '0.84rem', color: 'var(--navy-600)', marginBottom: '8px', fontWeight: '600' }}>

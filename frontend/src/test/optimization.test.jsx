@@ -185,6 +185,19 @@ describe('Optimization Engine Page (OptimizationPage.jsx)', () => {
     });
 
     expect(mockShowNotification).toHaveBeenCalledWith('success', expect.stringContaining('Optimization complete'));
+
+    // Verify Fairness Evaluation & Urgency Equity Metrics remain visible
+    expect(screen.getByText(/Fairness Evaluation & Urgency Equity Metrics/i)).toBeInTheDocument();
+    expect(screen.getByText(/Distribution Equity Indicators/i)).toBeInTheDocument();
+    expect(screen.getByText(/Average Village Fulfilment:/i)).toBeInTheDocument();
+    expect(screen.getByText(/Minimum Village Fulfilment:/i)).toBeInTheDocument();
+    expect(screen.getByText(/Gini Inequality Index:/i)).toBeInTheDocument();
+    expect(screen.getByText(/Hoover \(Robin Hood\) Index:/i)).toBeInTheDocument();
+    expect(screen.getByText(/Underserved Locations:/i)).toBeInTheDocument();
+    expect(screen.getByText(/Urgency Tier Fulfilment Breakdown/i)).toBeInTheDocument();
+
+    // Verify Methodological Distinction callout is completely absent
+    expect(screen.queryByText(/Methodological Distinction: Optimization Objective vs. Fairness Evaluation/i)).not.toBeInTheDocument();
   });
 
   describe('Transportation Matrix Batch Grid', () => {
