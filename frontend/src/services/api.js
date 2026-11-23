@@ -72,8 +72,14 @@ export async function checkBackendHealth(timeoutMs = 4000) {
  * Warehouse API service
  */
 export const warehousesApi = {
-  list: (activeOnly = false) =>
-    request(`/api/warehouses${activeOnly ? '?active_only=true' : ''}`, { method: 'GET' }),
+  list: (activeOnly = false) => {
+    const active = typeof activeOnly === 'boolean' ? activeOnly : Boolean(activeOnly?.active_only);
+    return request(`/api/warehouses${active ? '?active_only=true' : ''}`, { method: 'GET' });
+  },
+  getAll: (params = {}) => {
+    const active = typeof params === 'boolean' ? params : Boolean(params?.active_only);
+    return request(`/api/warehouses${active ? '?active_only=true' : ''}`, { method: 'GET' });
+  },
   get: (id) => request(`/api/warehouses/${id}`, { method: 'GET' }),
   create: (data) =>
     request('/api/warehouses', {
@@ -136,8 +142,14 @@ export const inventoryApi = {
  * Affected Village API service
  */
 export const villagesApi = {
-  list: (activeOnly = false) =>
-    request(`/api/villages${activeOnly ? '?active_only=true' : ''}`, { method: 'GET' }),
+  list: (activeOnly = false) => {
+    const active = typeof activeOnly === 'boolean' ? activeOnly : Boolean(activeOnly?.active_only);
+    return request(`/api/villages${active ? '?active_only=true' : ''}`, { method: 'GET' });
+  },
+  getAll: (params = {}) => {
+    const active = typeof params === 'boolean' ? params : Boolean(params?.active_only);
+    return request(`/api/villages${active ? '?active_only=true' : ''}`, { method: 'GET' });
+  },
   get: (id) => request(`/api/villages/${id}`, { method: 'GET' }),
   create: (data) =>
     request('/api/villages', {
@@ -239,6 +251,12 @@ export const optimizationApi = {
   deleteRun: (id) => request(`/api/optimization/runs/${id}`, { method: 'DELETE' }),
   compare: (runAId, runBId) =>
     request(`/api/optimization/compare?run_a_id=${runAId}&run_b_id=${runBId}`, { method: 'GET' }),
+  getScenarios: () => request('/api/optimization/scenarios', { method: 'GET' }),
+  seedScenario: (scenarioKey, runSolver = true) =>
+    request(
+      `/api/optimization/seed-scenario?scenario_key=${encodeURIComponent(scenarioKey)}&run_solver=${runSolver}`,
+      { method: 'POST' }
+    ),
 };
 
 /**

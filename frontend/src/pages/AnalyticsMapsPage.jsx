@@ -30,6 +30,7 @@ import {
   Maximize2,
   Navigation,
   CheckCircle2,
+  Layers,
 } from 'lucide-react';
 
 import { analyticsApi } from '../services/api';
@@ -119,31 +120,94 @@ const isWithinOperationalBounds = (lat, lng) => {
 };
 
 // --- Map View Controller Component ---
-function MapViewController({ points, fitTrigger, resetTrigger }) {
+function MapViewController({ points, fitTrigger, resetTrigger, assamCenter, assamZoom }) {
   const map = useMap();
 
+  // Automatic resize synchronization when window or container dimensions change
   useEffect(() => {
+    const handleResize = () => {
+      map.invalidateSize();
+    };
+    window.addEventListener('resize', handleResize);
+    window.addEventListener('orientationchange', handleResize);
+    const timer = setTimeout(() => {
+      map.invalidateSize();
+    }, 250);
+    return () => {
+      window.removeEventListener('resize', handleResize);
+      window.removeEventListener('orientationchange', handleResize);
+      clearTimeout(timer);
+    };
+  }, [map]);
+
+  useEffect(() => {
+    if (fitTrigger === 0) return;
+
     const validCoords = (points || [])
       .filter((p) => isWithinOperationalBounds(p.lat, p.lng))
       .map((p) => [p.lat, p.lng]);
 
     if (validCoords.length === 0) {
-      map.setView([26.2006, 92.9376], 8, { animate: true });
+      map.setView(assamCenter, assamZoom, { animate: true });
     } else if (validCoords.length === 1) {
       map.setView(validCoords[0], 11, { animate: true });
     } else {
       map.fitBounds(validCoords, { padding: [50, 50], maxZoom: 13, animate: true });
     }
-  }, [points, fitTrigger, map]);
+  }, [fitTrigger, points, map, assamCenter, assamZoom]);
 
   useEffect(() => {
     if (resetTrigger > 0) {
-      map.setView([26.2006, 92.9376], 8, { animate: true });
+      map.setView(assamCenter, assamZoom, { animate: true });
     }
-  }, [resetTrigger, map]);
+  }, [resetTrigger, map, assamCenter, assamZoom]);
 
   return null;
 }
+
+// Available Basemap Tile Providers (Reliable, publicly accessible, keyless GIS layers)
+export const BASEMAP_OPTIONS = {
+  esri_street: {
+    id: 'esri_street',
+    name: 'Esri World Street',
+    label: 'Esri Street (English Labels)',
+    url: 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}',
+    attribution: 'Tiles &copy; <a href="https://www.esri.com/" target="_blank" rel="noopener noreferrer">Esri</a> &mdash; Source: Esri, DeLorme, NAVTEQ, USGS, Intermap, iPC, NRCAN, METI, TomTom, and the GIS User Community',
+    subdomains: 'abc',
+    maxZoom: 20,
+    maxNativeZoom: 17, // Native coverage in India up to z=17; Leaflet smoothly scales up to z=20 without "Map data not yet available" grey tiles
+  },
+  esri_topo: {
+    id: 'esri_topo',
+    name: 'Esri Topographic',
+    label: 'Esri Topographic (English Labels)',
+    url: 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Topo_Map/MapServer/tile/{z}/{y}/{x}',
+    attribution: 'Tiles &copy; <a href="https://www.esri.com/" target="_blank" rel="noopener noreferrer">Esri</a> &mdash; Esri, DeLorme, NAVTEQ, TomTom, Intermap, iPC, USGS, FAO, NPS, NRCAN, GeoBase, Kadaster NL, Ordnance Survey, Esri Japan, METI, Esri China (Hong Kong), and the GIS User Community',
+    subdomains: 'abc',
+    maxZoom: 20,
+    maxNativeZoom: 17,
+  },
+  esri_imagery: {
+    id: 'esri_imagery',
+    name: 'Esri Satellite',
+    label: 'Esri Satellite Imagery',
+    url: 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
+    attribution: 'Tiles &copy; <a href="https://www.esri.com/" target="_blank" rel="noopener noreferrer">Esri</a> &mdash; Source: Esri, i-cubed, USDA, USGS, AEX, GeoEye, Getmapping, Aerogrid, IGN, IGP, UPR-EGP, and the GIS User Community',
+    subdomains: 'abc',
+    maxZoom: 20,
+    maxNativeZoom: 18,
+  },
+  osm: {
+    id: 'osm',
+    name: 'OpenStreetMap',
+    label: 'OpenStreetMap Standard',
+    url: 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
+    attribution: '&copy; <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener noreferrer">OpenStreetMap</a> contributors',
+    subdomains: 'abc',
+    maxZoom: 20,
+    maxNativeZoom: 19,
+  },
+};
 
 export default function AnalyticsMapsPage({ onNavigate, showNotification }) {
   const [activeTab, setActiveTab] = useState('map'); // 'map' | 'analytics'
@@ -165,6 +229,30 @@ export default function AnalyticsMapsPage({ onNavigate, showNotification }) {
   const [fitTrigger, setFitTrigger] = useState(0);
   const [resetTrigger, setResetTrigger] = useState(0);
 
+  // Basemap Selection (defaults to Esri World Street with English labels, 100% keyless)
+  const [selectedBasemap, setSelectedBasemap] = useState(() => {
+    const saved = localStorage.getItem('reliefopt_basemap');
+    if (saved && BASEMAP_OPTIONS[saved]) {
+      return saved;
+    }
+    return 'esri_street';
+  });
+
+  // Ensure any legacy broken CARTO selection in localStorage is cleaned up immediately
+  useEffect(() => {
+    const saved = localStorage.getItem('reliefopt_basemap');
+    if (!saved || !BASEMAP_OPTIONS[saved]) {
+      localStorage.setItem('reliefopt_basemap', 'esri_street');
+      setSelectedBasemap('esri_street');
+    }
+  }, []);
+
+  const currentBasemap = useMemo(() => {
+    return BASEMAP_OPTIONS[selectedBasemap] || BASEMAP_OPTIONS.esri_street;
+  }, [selectedBasemap]);
+
+  const tileUrl = currentBasemap.url;
+
   // Fetch Analytics Overview
   const fetchData = useCallback(async () => {
     setLoading(true);
@@ -183,6 +271,8 @@ export default function AnalyticsMapsPage({ onNavigate, showNotification }) {
         if (!selectedPlanId && res.data.selected_plan_id) {
           setSelectedPlanId(String(res.data.selected_plan_id));
         }
+        // Auto-fit bounds to available markers after initial data load
+        setFitTrigger((prev) => prev + 1);
       } else {
         setError(res.error || 'Failed to load analytics overview.');
         if (showNotification) {
@@ -208,7 +298,7 @@ export default function AnalyticsMapsPage({ onNavigate, showNotification }) {
     setSelectedUrgency('');
   };
 
-  // Filtered map points based on UI toggles & filters
+  // Filtered map points based on UI toggles & filters (including warehouses, villages, and active distribution routes)
   const mapPointsForFit = useMemo(() => {
     if (!data) return [];
     const pts = [];
@@ -228,12 +318,45 @@ export default function AnalyticsMapsPage({ onNavigate, showNotification }) {
         }
       });
     }
+    if (showRoutes && data.distribution_routes) {
+      data.distribution_routes.forEach((r) => {
+        if (isWithinOperationalBounds(r.warehouse_lat, r.warehouse_lng)) {
+          pts.push({ lat: r.warehouse_lat, lng: r.warehouse_lng });
+        }
+        if (isWithinOperationalBounds(r.village_lat, r.village_lng)) {
+          pts.push({ lat: r.village_lat, lng: r.village_lng });
+        }
+      });
+    }
     return pts;
-  }, [data, showWarehouses, showVillages, selectedUrgency]);
+  }, [data, showWarehouses, showVillages, showRoutes, selectedUrgency]);
 
-  // Default Center (Assam / North East India) if no coordinates available
+  // Default Center: Set to active Assam disaster operations region (lat 26.2006, lng 92.9376)
   const defaultCenter = [26.2006, 92.9376];
-  const defaultZoom = 8;
+  const defaultZoom = 7.5;
+  const assamCenter = [26.2006, 92.9376];
+  const assamZoom = 8;
+
+  // Spiderfy dispersal calculation for overlapping/co-located markers to ensure all are visible and clickable
+  const getDispersedWarehousePosition = useCallback((wh, allWarehouses) => {
+    if (!allWarehouses || allWarehouses.length <= 1) return [wh.latitude, wh.longitude];
+    const duplicates = allWarehouses.filter(
+      (other) =>
+        other.has_valid_coordinates &&
+        Math.abs(other.latitude - wh.latitude) < 0.001 &&
+        Math.abs(other.longitude - wh.longitude) < 0.001
+    );
+    if (duplicates.length <= 1) {
+      return [wh.latitude, wh.longitude];
+    }
+    const dupIndex = duplicates.findIndex((other) => other.id === wh.id);
+    const angle = (dupIndex / duplicates.length) * (2 * Math.PI) + Math.PI / 4;
+    const radius = 0.006; // visual separation in degrees (~600m on map)
+    return [
+      wh.latitude + radius * Math.cos(angle),
+      wh.longitude + radius * Math.sin(angle),
+    ];
+  }, []);
 
   // Chart Theme Configuration
   const plotLayoutDefaults = {
@@ -251,10 +374,9 @@ export default function AnalyticsMapsPage({ onNavigate, showNotification }) {
         {/* Page Header */}
         <div className="page-header flex justify-between items-center flex-wrap gap-4">
           <div>
-            <div className="badge-pill mb-2">Stage 4 — Interactive Maps & Analytics</div>
             <h1 className="page-title">Geospatial Intelligence & Supply Analytics</h1>
             <p className="page-subtitle">
-              Interactive OpenStreetMap relief distribution network and Google OR-Tools optimization reporting.
+              Interactive relief distribution network and Google OR-Tools optimization reporting.
             </p>
           </div>
 
@@ -549,6 +671,27 @@ export default function AnalyticsMapsPage({ onNavigate, showNotification }) {
               </div>
 
               <div className="flex items-center gap-2 flex-wrap">
+                {/* Basemap Provider Selector */}
+                <div className="flex items-center gap-1.5 bg-slate-50 px-2 py-1 rounded-lg border border-slate-200">
+                  <Layers size={13} className="text-slate-500" />
+                  <span className="text-xs font-medium text-slate-600">Basemap:</span>
+                  <select
+                    value={selectedBasemap}
+                    onChange={(e) => {
+                      setSelectedBasemap(e.target.value);
+                      localStorage.setItem('reliefopt_basemap', e.target.value);
+                    }}
+                    className="text-xs bg-white border border-slate-300 rounded px-2 py-0.5 font-medium text-slate-700 focus:outline-none focus:ring-1 focus:ring-blue-500 cursor-pointer"
+                    title="Select geographical basemap tile provider"
+                  >
+                    {Object.values(BASEMAP_OPTIONS).map((opt) => (
+                      <option key={opt.id} value={opt.id}>
+                        {opt.label}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
                 {/* Reset to Assam Button */}
                 <button
                   onClick={() => setResetTrigger((prev) => prev + 1)}
@@ -572,19 +715,23 @@ export default function AnalyticsMapsPage({ onNavigate, showNotification }) {
             </div>
 
             {/* Leaflet Map Frame */}
-            <div className="relative" style={{ height: '580px', width: '100%' }}>
+            <div className="map-frame-wrapper relative" style={{ width: '100%' }}>
               <MapContainer
                 center={defaultCenter}
                 zoom={defaultZoom}
-                minZoom={6}
-                maxZoom={19}
+                minZoom={3}
+                maxZoom={20}
+                zoomSnap={0.5}
                 scrollWheelZoom={true}
                 style={{ height: '100%', width: '100%' }}
               >
                 <TileLayer
-                  attribution='&copy; <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener noreferrer">OpenStreetMap</a> contributors'
-                  url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-                  maxZoom={19}
+                  key={currentBasemap.id}
+                  attribution={currentBasemap.attribution}
+                  url={tileUrl}
+                  subdomains={currentBasemap.subdomains || 'abc'}
+                  maxZoom={currentBasemap.maxZoom || 20}
+                  maxNativeZoom={currentBasemap.maxNativeZoom || 17}
                 />
 
                 {/* Map View Controller (Auto-Fit & Assam Reset) */}
@@ -592,6 +739,8 @@ export default function AnalyticsMapsPage({ onNavigate, showNotification }) {
                   points={mapPointsForFit}
                   fitTrigger={fitTrigger}
                   resetTrigger={resetTrigger}
+                  assamCenter={assamCenter}
+                  assamZoom={assamZoom}
                 />
 
                 {/* Warehouse Markers */}
@@ -600,10 +749,19 @@ export default function AnalyticsMapsPage({ onNavigate, showNotification }) {
                     if (!wh.has_valid_coordinates || !isWithinOperationalBounds(wh.latitude, wh.longitude)) return null;
                     if (selectedWarehouseId && String(wh.id) !== selectedWarehouseId) return null;
 
+                    const markerPos = getDispersedWarehousePosition(wh, data?.warehouses_geo);
+                    const isCoLocated = (data?.warehouses_geo || []).filter(
+                      (other) =>
+                        other.id !== wh.id &&
+                        other.has_valid_coordinates &&
+                        Math.abs(other.latitude - wh.latitude) < 0.001 &&
+                        Math.abs(other.longitude - wh.longitude) < 0.001
+                    ).length > 0;
+
                     return (
                       <Marker
                         key={`wh_${wh.id}`}
-                        position={[wh.latitude, wh.longitude]}
+                        position={markerPos}
                         icon={createWarehouseMarkerIcon()}
                       >
                         <Popup className="custom-popup" minWidth={260}>
@@ -638,6 +796,17 @@ export default function AnalyticsMapsPage({ onNavigate, showNotification }) {
                                   {wh.is_active ? 'Active' : 'Inactive'}
                                 </span>
                               </div>
+                              <div className="flex justify-between py-0.5 border-t border-slate-200 mt-1 pt-1">
+                                <span className="text-slate-500">Coordinates:</span>
+                                <span className="font-mono text-slate-700">
+                                  {wh.latitude.toFixed(4)}, {wh.longitude.toFixed(4)}
+                                </span>
+                              </div>
+                              {isCoLocated && (
+                                <div className="text-blue-600 font-medium text-xs mt-1 pt-1 border-t border-blue-100">
+                                  Co-located Depot &bull; Spiderfy Dispersal Active
+                                </div>
+                              )}
                             </div>
 
                             {/* Stock by Supply */}
@@ -836,7 +1005,7 @@ export default function AnalyticsMapsPage({ onNavigate, showNotification }) {
               </MapContainer>
 
               {/* Floating Map Legend */}
-              <div className="absolute bottom-4 right-4 bg-white/95 backdrop-blur-sm p-3 rounded-lg border border-slate-200 shadow-md text-xs z-[1000] pointer-events-auto max-w-xs">
+              <div className="map-legend-box absolute bottom-4 right-4 bg-white/95 backdrop-blur-sm p-3 rounded-lg border border-slate-200 shadow-md text-xs z-[1000] pointer-events-auto max-w-xs">
                 <div className="font-semibold text-slate-800 mb-2 flex items-center gap-1.5">
                   <Info size={13} className="text-blue-600" />
                   <span>Map Legend</span>

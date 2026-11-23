@@ -5,52 +5,52 @@ export default function TechStack() {
   const technologies = [
     {
       name: 'React.js',
-      role: 'Frontend Framework',
+      role: 'Frontend Client Architecture',
       status: 'active',
-      badgeText: 'Configured (Stage 1)',
+      badgeText: 'Active & Integrated',
       description: 'Single-page client interface built with functional components, hooks, and modern CSS.',
     },
     {
       name: 'FastAPI',
-      role: 'Backend REST API',
+      role: 'High-Performance REST Backend',
       status: 'active',
-      badgeText: 'Configured (Stage 1)',
-      description: 'High-performance asynchronous Python framework providing typed endpoints and automated OpenAPI docs.',
+      badgeText: 'Active & Integrated',
+      description: 'Asynchronous Python framework providing typed RESTful endpoints, Pydantic validations, and automated OpenAPI documentation.',
     },
     {
-      name: 'Python',
-      role: 'Core Language',
+      name: 'Python 3',
+      role: 'Core Backend Runtime',
       status: 'active',
-      badgeText: 'Configured (Stage 1)',
-      description: 'Powering backend services, configuration management, and health diagnostics.',
+      badgeText: 'Active & Integrated',
+      description: 'Powering backend services, data validation models, solver integration, and real-time health diagnostics.',
     },
     {
       name: 'PostgreSQL',
       role: 'Relational Database',
-      status: 'planned',
-      badgeText: 'Planned (Stage 2)',
-      description: 'Planned database for storing registered warehouses, affected village demand, and allocation records.',
+      status: 'active',
+      badgeText: 'Active & Integrated',
+      description: 'Enterprise relational database storing registered warehouses, affected village demand, supply catalogue, inventory levels, and historical solver plans.',
     },
     {
       name: 'Google OR-Tools',
-      role: 'Planned Optimisation Engine',
-      status: 'planned',
-      badgeText: 'Planned (Stage 3)',
-      description: 'Planned solver to recommend allocations considering inventory, demand, transportation costs, urgency, and fairness rules.',
+      role: 'Mathematical Optimization Engine',
+      status: 'active',
+      badgeText: 'Active & Integrated',
+      description: 'Mixed-Integer Linear Programming (MILP) solver optimizing multi-commodity emergency allocations under inventory, demand, urgency, and cost constraints.',
     },
     {
-      name: 'Plotly',
-      role: 'Planned Interactive Charts',
-      status: 'planned',
-      badgeText: 'Planned (Stage 4)',
-      description: 'Planned charts for reviewing allocated quantities, estimated costs, and unmet demand.',
+      name: 'Plotly.js',
+      role: 'Operational Visual Analytics',
+      status: 'active',
+      badgeText: 'Active & Integrated',
+      description: 'Interactive analytics charting allocated relief, critical fulfillment rates, unmet demands, and scenario cost comparisons.',
     },
     {
-      name: 'Leaflet & OSM',
-      role: 'Planned Geospatial Mapping',
-      status: 'planned',
-      badgeText: 'Planned (Stage 4)',
-      description: 'Planned map interface for visualising registered warehouse and affected village locations.',
+      name: 'Leaflet & GIS',
+      role: 'Geospatial Mapping & Routing',
+      status: 'active',
+      badgeText: 'Active & Integrated',
+      description: 'Geospatial visualization mapping supply depots, flood-affected villages, and optimal dispatch transit corridors with English cartography.',
     },
   ];
 
@@ -61,8 +61,8 @@ export default function TechStack() {
           <span className="section-tag">Engineering Foundation</span>
           <h2 className="section-title">Technology Stack</h2>
           <p className="section-subtitle">
-            The architecture combines a reactive frontend with a lightweight Python API,
-            establishing the foundation for planned database, optimisation, and visualization tools.
+            A production-ready architecture combining a responsive React frontend, robust FastAPI services,
+            PostgreSQL relational persistence, and Google OR-Tools mathematical optimization.
           </p>
         </div>
 

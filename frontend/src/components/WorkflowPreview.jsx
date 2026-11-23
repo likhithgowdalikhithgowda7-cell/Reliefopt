@@ -45,7 +45,7 @@ export default function WorkflowPreview() {
       number: 6,
       icon: <Map size={22} />,
       title: 'Analyse Charts and Map',
-      description: 'Visualise results using Plotly, Leaflet and OpenStreetMap.',
+      description: 'Visualise results using Plotly charts and Leaflet GIS mapping with English cartography.',
     },
   ];
 
@@ -54,9 +54,9 @@ export default function WorkflowPreview() {
       <div className="container">
         <div className="section-header">
           <span className="section-tag">End-to-End Pipeline</span>
-          <h2 className="section-title">Planned Operational Workflow</h2>
+          <h2 className="section-title">Operational Supply Distribution Pipeline</h2>
           <p className="section-subtitle">
-            ReliefOpt is designed to guide coordinators through a structured sequential workflow from
+            ReliefOpt guides coordinators through a structured sequential workflow from
             coordinator-entered field inputs to decision-support recommendations.
           </p>
         </div>
@@ -70,16 +70,6 @@ export default function WorkflowPreview() {
               <p className="step-desc">{step.description}</p>
             </div>
           ))}
-        </div>
-
-        <div className="workflow-disclaimer">
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
-            <Info size={18} />
-            <strong>Milestone Notice:</strong>
-          </div>
-          <span>
-            This represents the planned end-to-end workflow for ReliefOpt. Stage 1 establishes the client-server foundation; warehouse and village modules will arrive in Stage 2.
-          </span>
         </div>
       </div>
     </section>

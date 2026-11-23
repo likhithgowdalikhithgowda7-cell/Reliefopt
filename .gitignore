@@ -40,6 +40,10 @@ frontend/dist/
 dist/
 .vite/
 
+# Database Dumps and Backups
+*.sql
+backend/backups/
+
 # Environment Variables
 .env
 .env.local

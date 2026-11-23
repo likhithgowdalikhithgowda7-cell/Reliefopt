@@ -603,11 +603,34 @@ def compare_runs(
     delta_overall = round(run_b.overall_fulfilment_pct - run_a.overall_fulfilment_pct, 1)
     delta_crit = round(run_b.critical_fulfilment_pct - run_a.critical_fulfilment_pct, 1)
 
+    fairness_a = (run_a.summary_metrics or {}).get("fairness", {})
+    fairness_b = (run_b.summary_metrics or {}).get("fairness", {})
+
+    gini_a = float(fairness_a.get("gini_coefficient", 0.0))
+    gini_b = float(fairness_b.get("gini_coefficient", 0.0))
+    gap_a = float(fairness_a.get("disparity_gap_pct", 0.0))
+    gap_b = float(fairness_b.get("disparity_gap_pct", 0.0))
+    underserved_a = int(fairness_a.get("underserved_villages_count", 0))
+    underserved_b = int(fairness_b.get("underserved_villages_count", 0))
+
+    delta_gini = round(gini_b - gini_a, 3)
+    delta_gap = round(gap_b - gap_a, 1)
+    delta_underserved = underserved_b - underserved_a
+    rating_a = fairness_a.get("fairness_score_rating", "N/A")
+    rating_b = fairness_b.get("fairness_score_rating", "N/A")
+
+    fairness_summary = (
+        f"Gini coefficient shifted by {delta_gini:+} (from {gini_a:.3f} to {gini_b:.3f}); "
+        f"max-min disparity gap changed by {delta_gap:+}%; "
+        f"underserved locations count shifted by {delta_underserved:+}. "
+        f"Equity rating: '{rating_a}' -> '{rating_b}'."
+    )
+
     narrative = (
         f"Comparing '{run_b.scenario_name or run_b.run_id}' against baseline '{run_a.scenario_name or run_a.run_id}': "
         f"Allocated supplies changed by {delta_alloc:+} units, unmet demand changed by {delta_unmet:+} units, "
         f"and total transportation cost changed by ₹{delta_cost:+}. "
-        f"Overall demand fulfilment changed by {delta_overall:+} percentage points."
+        f"Overall demand fulfilment changed by {delta_overall:+} percentage points. {fairness_summary}"
     )
 
     return ScenarioComparisonResponse(
@@ -618,5 +641,11 @@ def compare_runs(
         delta_transport_cost=delta_cost,
         delta_overall_fulfilment_pct=delta_overall,
         delta_critical_fulfilment_pct=delta_crit,
+        delta_disparity_gap_pct=delta_gap,
+        delta_gini_coefficient=delta_gini,
+        delta_underserved_count=delta_underserved,
+        baseline_fairness_rating=rating_a,
+        comparison_fairness_rating=rating_b,
+        fairness_comparison_summary=fairness_summary,
         narrative_summary=narrative,
     )

@@ -12,7 +12,7 @@ class Settings(BaseSettings):
         "Backend API for ReliefOpt - Smart Emergency Relief Supply Distribution System"
     )
     VERSION: str = "1.0.0"
-    STAGE: str = "Stage 4 - Interactive Leaflet Maps & Plotly Analytics"
+    STAGE: str = "Operational (v1.0.0)"
     ENVIRONMENT: str = "development"
 
     # Database configuration (PostgreSQL via psycopg v3)

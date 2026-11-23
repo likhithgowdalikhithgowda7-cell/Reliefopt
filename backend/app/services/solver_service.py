@@ -188,6 +188,28 @@ class ReliefOptimizationSolver:
                 solver.Add(solver.Sum(incoming_shipments) + u[(vil_id, sup_id)] == req_qty)
 
         # -------------------------------------------------------------
+        # Constraint C: Critical Supply Satisfaction Guarantee
+        # If total inventory of supply s >= total critical demand of supply s,
+        # enforce u[v, s] == 0 for all critical demands.
+        # -------------------------------------------------------------
+        for sup in self.supplies:
+            sup_id = sup["id"]
+            total_stock_for_sup = sum(
+                self.inventories.get((wh["id"], sup_id), 0.0)
+                for wh in self.warehouses
+            )
+            crit_demands_for_sup = [
+                d for d in self.demands
+                if d["supply_id"] == sup_id and d.get("urgency_level") == "Critical"
+            ]
+            total_crit_req = sum(float(d["required_quantity"]) for d in crit_demands_for_sup)
+            if total_stock_for_sup >= total_crit_req and total_crit_req > 0:
+                for d in crit_demands_for_sup:
+                    vil_id = d["village_id"]
+                    if (vil_id, sup_id) in u:
+                        solver.Add(u[(vil_id, sup_id)] == 0)
+
+        # -------------------------------------------------------------
         # Objective Function:
         # Hierarchical Penalty: Critical >> High >> Medium >> Low >> Transportation Cost
         # -------------------------------------------------------------
@@ -360,6 +382,21 @@ class ReliefOptimizationSolver:
         critical_metric = fairness.urgency_breakdown.get("Critical")
         critical_fulfilment_pct = critical_metric.fulfilment_pct if critical_metric else 100.0
 
+        objective_formula = (
+            "Minimize Z = Sum_{w,v,s} (c_{w,v} * x_{w,v,s}) + Sum_{v,s} (P(urgency_{v,s}) * u_{v,s})"
+        )
+        constraints_list = [
+            "Constraint A (Inventory Capacity): Sum_v x_{w,v,s} <= Inventory_{w,s} for all warehouses w, supplies s",
+            "Constraint B (Demand Conservation & Slack): Sum_w x_{w,v,s} + u_{v,s} == Demand_{v,s} for all villages v, supplies s",
+            "Constraint C (Critical Supply Floor): u_{v,s} == 0 for all Critical demands whenever TotalStock_s >= TotalCriticalDemand_s",
+            "Constraint D (Integrality & Bounds): x_{w,v,s} >= 0, u_{v,s} >= 0 (discrete integer domain for count items)",
+        ]
+        fairness_note = (
+            "Mathematical Notice: Minimum-cost allocation does not automatically guarantee spatial or demographic fairness. "
+            "Cost-minimization naturally favors villages with cheaper transit routes unless balanced by explicit fairness "
+            "constraints or urgency penalties. Evaluate Gini coefficient and Hoover index post-solve."
+        )
+
         return OptimizationSolveResponse(
             run_id=run_id,
             status=status_str,
@@ -379,6 +416,10 @@ class ReliefOptimizationSolver:
             critical_fulfilment_pct=critical_fulfilment_pct,
             is_scenario=self.is_scenario,
             scenario_name=self.scenario_name,
+            optimization_strategy="urgency_priority_cost_min",
+            objective_formulation=objective_formula,
+            constraints_formulation=constraints_list,
+            fairness_disclaimer=fairness_note,
             allocations=allocations_list,
             demand_fulfilment=demand_fulfilment_list,
             stock_usage=stock_usage_list,
@@ -437,8 +478,51 @@ class ReliefOptimizationSolver:
             min_pct = min(fulfil_percentages)
             max_pct = max(fulfil_percentages)
             disparity = round(max_pct - min_pct, 1)
+
+            # Gini Coefficient calculation on village fulfillment percentages
+            sorted_pcts = sorted(fulfil_percentages)
+            n = len(sorted_pcts)
+            if n > 1 and sum(sorted_pcts) > 0:
+                mean_val = sum(sorted_pcts) / n
+                diff_sum = sum(abs(a - b) for a in sorted_pcts for b in sorted_pcts)
+                gini = round(diff_sum / (2.0 * n * n * mean_val), 3)
+            else:
+                gini = 0.0
+
+            # Hoover (Robin Hood) Index: proportion of resources needing redistribution for equity
+            if n > 0 and sum(sorted_pcts) > 0:
+                total_p = sum(sorted_pcts)
+                hoover = round(0.5 * sum(abs(p / total_p - 1.0 / n) for p in sorted_pcts) * 100.0, 1)
+            else:
+                hoover = 0.0
         else:
             avg_pct = min_pct = max_pct = disparity = 100.0
+            gini = 0.0
+            hoover = 0.0
+
+        # Identify underserved locations with deficits or unmet critical demand
+        underserved_villages = []
+        for v_item in village_fairness_items:
+            unmet_crits = [
+                d for d in demand_items
+                if d.village_id == v_item.village_id and d.urgency_level == "Critical" and d.unmet_quantity > 0
+            ]
+            if v_item.fulfilment_pct < 50.0:
+                underserved_villages.append(
+                    f"{v_item.village_name} ({v_item.fulfilment_pct}% fulfilled - severe supply deficit)"
+                )
+            elif unmet_crits:
+                crit_names = ", ".join(d.supply_name for d in unmet_crits)
+                underserved_villages.append(
+                    f"{v_item.village_name} ({v_item.fulfilment_pct}% fulfilled - unmet critical: {crit_names})"
+                )
+
+        if gini <= 0.15:
+            fairness_rating = "High Equity (Gini <= 0.15)"
+        elif gini <= 0.35:
+            fairness_rating = "Moderate Disparity (0.15 < Gini <= 0.35)"
+        else:
+            fairness_rating = "Severe Disparity (Gini > 0.35)"
 
         urgency_breakdown: Dict[str, UrgencyTierMetric] = {}
         for level, stats in urgency_totals.items():
@@ -454,12 +538,24 @@ class ReliefOptimizationSolver:
                 fulfilment_pct=pct,
             )
 
+        explanation = (
+            "Fairness is evaluated post-solve using the Gini coefficient and Max-Min fulfillment gap. "
+            "A standard minimum-cost MILP prioritizes locations closest to warehouses; urgency penalty weights "
+            "and equitable floors ensure distant communities with severe needs are not neglected."
+        )
+
         return FairnessMetrics(
             village_fulfilments=village_fairness_items,
             average_fulfilment_pct=avg_pct,
             min_fulfilment_pct=min_pct,
             max_fulfilment_pct=max_pct,
             disparity_gap_pct=disparity,
+            gini_coefficient=gini,
+            hoover_index=hoover,
+            underserved_villages_count=len(underserved_villages),
+            underserved_villages=underserved_villages,
+            fairness_score_rating=fairness_rating,
+            methodology_explanation=explanation,
             urgency_breakdown=urgency_breakdown,
         )
 
@@ -501,6 +597,14 @@ class ReliefOptimizationSolver:
             critical_fulfilment_pct=0.0,
             is_scenario=self.is_scenario,
             scenario_name=self.scenario_name,
+            optimization_strategy="urgency_priority_cost_min",
+            objective_formulation="Minimize Z = Sum_{w,v,s} (c_{w,v} * x_{w,v,s}) + Sum_{v,s} (P(urgency_{v,s}) * u_{v,s})",
+            constraints_formulation=[
+                "Constraint A (Inventory Capacity): Sum_v x_{w,v,s} <= Inventory_{w,s}",
+                "Constraint B (Demand Conservation & Slack): Sum_w x_{w,v,s} + u_{v,s} == Demand_{v,s}",
+                "Constraint C (Critical Supply Floor): u_{v,s} == 0 for all Critical demands when stock >= critical demand",
+            ],
+            fairness_disclaimer="Zero inventory available across warehouses. All demand unmet.",
             allocations=[],
             demand_fulfilment=demand_fulfilment_list,
             stock_usage=[],
@@ -526,6 +630,10 @@ class ReliefOptimizationSolver:
             critical_fulfilment_pct=0.0,
             is_scenario=self.is_scenario,
             scenario_name=self.scenario_name,
+            optimization_strategy="urgency_priority_cost_min",
+            objective_formulation="Minimize Z = Sum_{w,v,s} (c_{w,v} * x_{w,v,s}) + Sum_{v,s} (P(urgency_{v,s}) * u_{v,s})",
+            constraints_formulation=[],
+            fairness_disclaimer="Solver terminated with infeasible or abnormal status.",
             allocations=[],
             demand_fulfilment=[],
             stock_usage=[],
@@ -535,6 +643,11 @@ class ReliefOptimizationSolver:
                 min_fulfilment_pct=0.0,
                 max_fulfilment_pct=0.0,
                 disparity_gap_pct=0.0,
+                gini_coefficient=0.0,
+                hoover_index=0.0,
+                underserved_villages_count=len(self.villages),
+                underserved_villages=[v.get("name", "Village") for v in self.villages],
+                fairness_score_rating="Severe Disparity",
                 urgency_breakdown={},
             ),
         )

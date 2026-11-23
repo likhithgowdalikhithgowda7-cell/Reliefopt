@@ -22,8 +22,8 @@ export default function ConnectionStatus({ status, healthData, error, endpointUr
             {status === 'connected' && healthData && (
               <span>
                 Verified API: <span className="connection-endpoint-tag">{endpointUrl}</span> • Version:{' '}
-                <strong>{healthData.version || '1.0.0'}</strong> • Milestone:{' '}
-                <strong>{healthData.stage || 'Stage 1'}</strong>
+                <strong>{healthData.version || '1.0.0'}</strong> • System Status:{' '}
+                <strong>{healthData.status === 'healthy' ? 'Operational (v1.0.0)' : 'Degraded'}</strong>
               </span>
             )}
 

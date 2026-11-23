@@ -35,9 +35,11 @@ class DemandCreate(DemandBase):
 class DemandUpdate(BaseModel):
     """Schema for updating existing village demand."""
 
-    required_quantity: Optional[float] = Field(None, gt=0.0)
+    village_id: Optional[int] = Field(None, gt=0, description="Affected village ID")
+    supply_id: Optional[int] = Field(None, gt=0, description="Relief supply ID")
+    required_quantity: Optional[float] = Field(None, gt=0.0, description="Required quantity (must be positive)")
     urgency_level: Optional[str] = None
-    remarks: Optional[str] = Field(None, max_length=500)
+    remarks: Optional[str] = Field(None, max_length=500, description="Field coordinator remarks")
 
     @field_validator("urgency_level")
     @classmethod

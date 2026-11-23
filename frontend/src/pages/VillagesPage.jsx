@@ -81,6 +81,24 @@ export default function VillagesPage({ showNotification, onNavigate }) {
     e.preventDefault();
     setSubmitting(true);
 
+    if (!formData.name.trim()) {
+      showNotification('error', 'Village name is required.');
+      setSubmitting(false);
+      return;
+    }
+
+    if (!formData.district.trim()) {
+      showNotification('error', 'District name is required.');
+      setSubmitting(false);
+      return;
+    }
+
+    if (!formData.state.trim()) {
+      showNotification('error', 'State name is required.');
+      setSubmitting(false);
+      return;
+    }
+
     const lat = parseFloat(formData.latitude);
     const lon = parseFloat(formData.longitude);
     const pop = parseInt(formData.population, 10);
@@ -129,6 +147,24 @@ export default function VillagesPage({ showNotification, onNavigate }) {
     e.preventDefault();
     if (!selectedVillage) return;
     setSubmitting(true);
+
+    if (!formData.name.trim()) {
+      showNotification('error', 'Village name cannot be empty.');
+      setSubmitting(false);
+      return;
+    }
+
+    if (!formData.district.trim()) {
+      showNotification('error', 'District name cannot be empty.');
+      setSubmitting(false);
+      return;
+    }
+
+    if (!formData.state.trim()) {
+      showNotification('error', 'State name cannot be empty.');
+      setSubmitting(false);
+      return;
+    }
 
     const lat = parseFloat(formData.latitude);
     const lon = parseFloat(formData.longitude);
@@ -243,7 +279,7 @@ export default function VillagesPage({ showNotification, onNavigate }) {
           <table className="data-table">
             <thead>
               <tr>
-                <th>ID</th>
+                <th title="Serial Number">#</th>
                 <th>Village Name</th>
                 <th>District / State</th>
                 <th>Coordinates</th>
@@ -254,9 +290,13 @@ export default function VillagesPage({ showNotification, onNavigate }) {
               </tr>
             </thead>
             <tbody>
-              {villages.map((v) => (
+              {villages.map((v, index) => (
                 <tr key={v.id} className={!v.is_active ? 'row-inactive' : ''}>
-                  <td><span className="id-badge">#{v.id}</span></td>
+                  <td>
+                    <span className="id-badge" title={`Database ID: ${v.id}`}>
+                      #{index + 1}
+                    </span>
+                  </td>
                   <td><strong>{v.name}</strong></td>
                   <td>
                     <span>{v.district}, {v.state}</span>

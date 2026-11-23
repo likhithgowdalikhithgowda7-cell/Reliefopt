@@ -81,6 +81,24 @@ export default function SuppliesPage({ showNotification }) {
     e.preventDefault();
     setSubmitting(true);
 
+    if (!formData.name.trim()) {
+      showNotification('error', 'Supply name cannot be empty.');
+      setSubmitting(false);
+      return;
+    }
+
+    if (!formData.category) {
+      showNotification('error', 'Please select a valid relief supply category.');
+      setSubmitting(false);
+      return;
+    }
+
+    if (!formData.unit.trim()) {
+      showNotification('error', 'Unit of measurement (e.g., Kits, Litres, Packs) is required.');
+      setSubmitting(false);
+      return;
+    }
+
     const payload = {
       name: formData.name.trim(),
       category: formData.category,
@@ -104,6 +122,24 @@ export default function SuppliesPage({ showNotification }) {
     e.preventDefault();
     if (!selectedSupply) return;
     setSubmitting(true);
+
+    if (!formData.name.trim()) {
+      showNotification('error', 'Supply name cannot be empty.');
+      setSubmitting(false);
+      return;
+    }
+
+    if (!formData.category) {
+      showNotification('error', 'Please select a valid relief supply category.');
+      setSubmitting(false);
+      return;
+    }
+
+    if (!formData.unit.trim()) {
+      showNotification('error', 'Unit of measurement cannot be empty.');
+      setSubmitting(false);
+      return;
+    }
 
     const payload = {
       name: formData.name.trim(),
@@ -179,7 +215,7 @@ export default function SuppliesPage({ showNotification }) {
           <table className="data-table">
             <thead>
               <tr>
-                <th>ID</th>
+                <th title="Serial Number">#</th>
                 <th>Supply Name</th>
                 <th>Category</th>
                 <th>Measurement Unit</th>
@@ -188,10 +224,12 @@ export default function SuppliesPage({ showNotification }) {
               </tr>
             </thead>
             <tbody>
-              {supplies.map((item) => (
+              {supplies.map((item, index) => (
                 <tr key={item.id}>
                   <td>
-                    <span className="id-badge">#{item.id}</span>
+                    <span className="id-badge" title={`Database ID: ${item.id}`}>
+                      #{index + 1}
+                    </span>
                   </td>
                   <td>
                     <strong>{item.name}</strong>

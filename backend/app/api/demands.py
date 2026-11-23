@@ -110,7 +110,7 @@ def update_demand(
     data: DemandUpdate,
     db: Session = Depends(get_db),
 ):
-    """Update required quantity, urgency level, or remarks for a demand record."""
+    """Update required quantity, urgency level, remarks, village, or supply for a demand record."""
     demand = demand_service.get_demand_by_id(db, demand_id)
     if not demand:
         raise HTTPException(
@@ -118,8 +118,14 @@ def update_demand(
             detail=f"Demand record with ID {demand_id} not found.",
         )
 
-    updated = demand_service.update_demand(db, demand, data)
-    return _to_response(updated)
+    try:
+        updated = demand_service.update_demand(db, demand, data)
+        return _to_response(updated)
+    except ValueError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail=str(exc),
+        )
 
 
 @router.delete(

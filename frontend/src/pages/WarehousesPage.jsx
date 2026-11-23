@@ -93,6 +93,18 @@ export default function WarehousesPage({ showNotification, onNavigate }) {
     e.preventDefault();
     setSubmitting(true);
 
+    if (!formData.name.trim()) {
+      showNotification('error', 'Warehouse name is required and cannot be empty.');
+      setSubmitting(false);
+      return;
+    }
+
+    if (!formData.address.trim()) {
+      showNotification('error', 'Warehouse street address or location description is required.');
+      setSubmitting(false);
+      return;
+    }
+
     const lat = parseFloat(formData.latitude);
     const lon = parseFloat(formData.longitude);
 
@@ -133,6 +145,18 @@ export default function WarehousesPage({ showNotification, onNavigate }) {
     e.preventDefault();
     if (!selectedWarehouse) return;
     setSubmitting(true);
+
+    if (!formData.name.trim()) {
+      showNotification('error', 'Warehouse name cannot be empty.');
+      setSubmitting(false);
+      return;
+    }
+
+    if (!formData.address.trim()) {
+      showNotification('error', 'Warehouse address cannot be empty.');
+      setSubmitting(false);
+      return;
+    }
 
     const lat = parseFloat(formData.latitude);
     const lon = parseFloat(formData.longitude);
@@ -239,7 +263,7 @@ export default function WarehousesPage({ showNotification, onNavigate }) {
           <table className="data-table">
             <thead>
               <tr>
-                <th>ID</th>
+                <th title="Serial Number">#</th>
                 <th>Warehouse Name</th>
                 <th>Location / Address</th>
                 <th>Coordinates</th>
@@ -250,10 +274,12 @@ export default function WarehousesPage({ showNotification, onNavigate }) {
               </tr>
             </thead>
             <tbody>
-              {warehouses.map((wh) => (
+              {warehouses.map((wh, index) => (
                 <tr key={wh.id} className={!wh.is_active ? 'row-inactive' : ''}>
                   <td>
-                    <span className="id-badge">#{wh.id}</span>
+                    <span className="id-badge" title={`Database ID: ${wh.id}`}>
+                      #{index + 1}
+                    </span>
                   </td>
                   <td>
                     <strong>{wh.name}</strong>
@@ -528,26 +554,28 @@ export default function WarehousesPage({ showNotification, onNavigate }) {
               </button>
             </div>
           ) : (
-            <table className="data-table" style={{ marginTop: '12px' }}>
-              <thead>
-                <tr>
-                  <th>Supply Item</th>
-                  <th>Category</th>
-                  <th>Available Quantity</th>
-                  <th>Unit</th>
-                </tr>
-              </thead>
-              <tbody>
-                {warehouseInventory.map((item) => (
-                  <tr key={item.id}>
-                    <td><strong>{item.supply_name}</strong></td>
-                    <td><span className="pill-badge badge-neutral">{item.supply_category}</span></td>
-                    <td><strong>{item.available_quantity.toLocaleString()}</strong></td>
-                    <td>{item.supply_unit}</td>
+            <div className="table-responsive-wrapper">
+              <table className="data-table" style={{ marginTop: '4px' }}>
+                <thead>
+                  <tr>
+                    <th>Supply Item</th>
+                    <th>Category</th>
+                    <th>Available Quantity</th>
+                    <th>Unit</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+                <tbody>
+                  {warehouseInventory.map((item) => (
+                    <tr key={item.id}>
+                      <td><strong>{item.supply_name}</strong></td>
+                      <td><span className="pill-badge badge-neutral">{item.supply_category}</span></td>
+                      <td><strong>{item.available_quantity.toLocaleString()}</strong></td>
+                      <td>{item.supply_unit}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           )}
         </div>
       </Modal>

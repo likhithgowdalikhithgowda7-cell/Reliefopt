@@ -9,4 +9,10 @@ export default defineConfig({
     host: '127.0.0.1',
     open: false,
   },
+  test: {
+    globals: true,
+    environment: 'jsdom',
+    setupFiles: './src/test/setup.js',
+    css: false,
+  },
 });

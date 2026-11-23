@@ -95,6 +95,16 @@ class FairnessMetrics(BaseModel):
     min_fulfilment_pct: float
     max_fulfilment_pct: float
     disparity_gap_pct: float
+    gini_coefficient: float = 0.0
+    hoover_index: float = 0.0
+    underserved_villages_count: int = 0
+    underserved_villages: List[str] = Field(default_factory=list)
+    fairness_score_rating: str = "High Equity"
+    methodology_explanation: str = (
+        "Fairness is evaluated post-solve using the Gini coefficient and Max-Min fulfillment gap. "
+        "Cost-minimizing MILP prioritizes lower transportation costs, which can inadvertently create "
+        "spatial disparities if not balanced by urgency penalties."
+    )
     urgency_breakdown: Dict[str, UrgencyTierMetric]
 
 
@@ -118,6 +128,10 @@ class OptimizationSolveResponse(BaseModel):
 
     is_scenario: bool = False
     scenario_name: Optional[str] = None
+    optimization_strategy: str = "urgency_priority_cost_min"
+    objective_formulation: Optional[str] = None
+    constraints_formulation: Optional[List[str]] = None
+    fairness_disclaimer: Optional[str] = None
 
     allocations: List[AllocationDetail]
     demand_fulfilment: List[DemandFulfilmentDetail]
@@ -191,4 +205,10 @@ class ScenarioComparisonResponse(BaseModel):
     delta_transport_cost: float
     delta_overall_fulfilment_pct: float
     delta_critical_fulfilment_pct: float
+    delta_disparity_gap_pct: float = 0.0
+    delta_gini_coefficient: float = 0.0
+    delta_underserved_count: int = 0
+    baseline_fairness_rating: str = "N/A"
+    comparison_fairness_rating: str = "N/A"
+    fairness_comparison_summary: str = ""
     narrative_summary: str

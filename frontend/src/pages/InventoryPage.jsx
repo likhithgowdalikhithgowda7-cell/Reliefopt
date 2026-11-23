@@ -209,7 +209,7 @@ export default function InventoryPage({ showNotification, onNavigate }) {
             <table className="data-table">
               <thead>
                 <tr>
-                  <th>ID</th>
+                  <th title="Serial Number">#</th>
                   <th>Warehouse Depot</th>
                   <th>Relief Supply Item</th>
                   <th>Category</th>
@@ -221,11 +221,15 @@ export default function InventoryPage({ showNotification, onNavigate }) {
                 </tr>
               </thead>
               <tbody>
-                {inventories.map((inv) => {
+                {inventories.map((inv, index) => {
                   const isLow = inv.available_quantity <= lowStockThreshold;
                   return (
                     <tr key={inv.id} className={isLow ? 'row-warning' : ''}>
-                      <td><span className="id-badge">#{inv.id}</span></td>
+                      <td>
+                        <span className="id-badge" title={`Database ID: ${inv.id}`}>
+                          #{index + 1}
+                        </span>
+                      </td>
                       <td>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
                           <Warehouse size={14} color="var(--primary-700)" />

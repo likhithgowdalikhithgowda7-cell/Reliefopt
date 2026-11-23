@@ -19,16 +19,16 @@ export default function Footer() {
           </div>
 
           <div className="footer-academic-badge">
-            Academic Mini Project
+            ReliefOpt v1.0.0
           </div>
         </div>
 
         <div className="footer-bottom">
           <div>
-            © {currentYear} ReliefOpt. Designed for emergency relief planning and decision-support.
+            © {currentYear} ReliefOpt — Autonomous Emergency Logistics Decision-Support System.
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-            <span>College Mini Project — Decision Support System</span>
+            <span>Autonomous Emergency Logistics Decision-Support Platform</span>
           </div>
         </div>
       </div>

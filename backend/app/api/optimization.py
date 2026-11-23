@@ -79,3 +79,22 @@ def compare_runs(
 ):
     """Compare two optimization plans side-by-side to evaluate tradeoffs."""
     return optimization_service.compare_runs(db, run_a_id, run_b_id)
+
+
+@router.get("/scenarios", response_model=List[dict])
+def list_scenarios():
+    """List available realistic Indian disaster relief scenarios for testing."""
+    from app.services import scenario_service
+    return scenario_service.list_available_scenarios()
+
+
+@router.post("/seed-scenario", response_model=dict, status_code=status.HTTP_201_CREATED)
+def seed_disaster_scenario(
+    scenario_key: str = Query("assam_flood", description="Scenario key: assam_flood, odisha_cyclone, kerala_landslide"),
+    run_solver: bool = Query(True, description="Whether to immediately run OR-Tools solver"),
+    db: Session = Depends(get_db),
+):
+    """Seed a realistic multi-warehouse disaster scenario and optionally execute optimization."""
+    from app.services import scenario_service
+    return scenario_service.seed_scenario(db, scenario_key=scenario_key, run_solver=run_solver)
+

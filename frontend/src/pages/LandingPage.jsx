@@ -32,15 +32,7 @@ export default function LandingPage({
         />
 
         {/* Diagnostic health connection banner */}
-        <div
-          className="container"
-          style={{
-            marginTop: '-24px',
-            marginBottom: '24px',
-            position: 'relative',
-            zIndex: 10,
-          }}
-        >
+        <div className="container connection-status-wrapper">
           <ConnectionStatus
             status={status}
             healthData={healthData}

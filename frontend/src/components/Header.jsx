@@ -1,9 +1,6 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   ShieldAlert,
-  Activity,
-  Wifi,
-  WifiOff,
   LayoutDashboard,
   Warehouse,
   Boxes,
@@ -13,39 +10,12 @@ import {
   Home,
   Cpu,
   Map,
+  Menu,
+  X,
 } from 'lucide-react';
 
-
 export default function Header({ status, currentTab, onSelectTab }) {
-  const getStatusBadge = () => {
-    switch (status) {
-      case 'connected':
-        return (
-          <span className="status-pill connected" title="FastAPI backend and PostgreSQL are responsive">
-            <span className="status-dot"></span>
-            <Wifi size={14} />
-            <span>Backend Connected</span>
-          </span>
-        );
-      case 'connecting':
-        return (
-          <span className="status-pill connecting" title="Contacting FastAPI health endpoint...">
-            <span className="status-dot"></span>
-            <Activity size={14} />
-            <span>Connecting...</span>
-          </span>
-        );
-      case 'unavailable':
-      default:
-        return (
-          <span className="status-pill unavailable" title="FastAPI backend is unreachable">
-            <span className="status-dot"></span>
-            <WifiOff size={14} />
-            <span>Backend Unavailable</span>
-          </span>
-        );
-    }
-  };
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   const navItems = [
     { id: 'landing', label: 'Home', icon: <Home size={15} /> },
@@ -59,37 +29,52 @@ export default function Header({ status, currentTab, onSelectTab }) {
     { id: 'analytics_maps', label: 'Analytics & Maps', icon: <Map size={15} /> },
   ];
 
+  // Close mobile menu on resize to desktop
+  useEffect(() => {
+    const handleResize = () => {
+      if (window.innerWidth > 1024) {
+        setMobileMenuOpen(false);
+      }
+    };
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
 
+  const handleNavClick = (tabId) => {
+    onSelectTab(tabId);
+    setMobileMenuOpen(false);
+  };
 
   return (
     <header className="header">
-      <div className="container header-container">
+      <div className="header-container">
         {/* Brand logo & title */}
         <div
           className="brand-wrapper"
-          onClick={() => onSelectTab('landing')}
+          onClick={() => handleNavClick('landing')}
           style={{ cursor: 'pointer' }}
           role="button"
           tabIndex={0}
         >
           <div className="brand-icon-box">
-            <ShieldAlert size={26} strokeWidth={2.2} />
+            <ShieldAlert size={24} strokeWidth={2.2} />
           </div>
           <div className="brand-text-group">
             <span className="brand-title">ReliefOpt</span>
-            <span className="brand-subtitle">Smart Emergency Relief Distribution System</span>
+            <span className="brand-subtitle">Smart Emergency Relief Distribution</span>
           </div>
         </div>
 
-        {/* Navigation links & status badge */}
+        {/* Desktop Navigation links */}
         <div className="header-actions">
-          <nav>
+          <nav className="desktop-nav" aria-label="Main Navigation">
             <ul className="nav-links">
               {navItems.map((item) => (
                 <li key={item.id}>
                   <button
-                    onClick={() => onSelectTab(item.id)}
+                    onClick={() => handleNavClick(item.id)}
                     className={`nav-link-btn ${currentTab === item.id ? 'active' : ''}`}
+                    title={item.label}
                   >
                     {item.icon}
                     <span>{item.label}</span>
@@ -99,10 +84,54 @@ export default function Header({ status, currentTab, onSelectTab }) {
             </ul>
           </nav>
 
-          {/* Dynamic Connection Indicator */}
-          {getStatusBadge()}
+          {/* Mobile Menu Toggle Button */}
+          <button
+            className="mobile-nav-toggle"
+            onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+            aria-label={mobileMenuOpen ? 'Close Navigation Menu' : 'Open Navigation Menu'}
+            aria-expanded={mobileMenuOpen}
+          >
+            {mobileMenuOpen ? <X size={22} /> : <Menu size={22} />}
+          </button>
         </div>
       </div>
+
+      {/* Mobile Navigation Drawer / Dropdown */}
+      {mobileMenuOpen && (
+        <>
+          <div
+            className="mobile-nav-backdrop"
+            onClick={() => setMobileMenuOpen(false)}
+            aria-hidden="true"
+          />
+          <nav className="mobile-nav-menu" aria-label="Mobile Navigation">
+            <div className="mobile-nav-header">
+              <span className="mobile-nav-heading">Navigation Menu</span>
+              <button
+                className="mobile-nav-close"
+                onClick={() => setMobileMenuOpen(false)}
+                aria-label="Close Menu"
+              >
+                <X size={18} />
+              </button>
+            </div>
+            <ul className="mobile-nav-list">
+              {navItems.map((item) => (
+                <li key={item.id}>
+                  <button
+                    onClick={() => handleNavClick(item.id)}
+                    className={`mobile-nav-item ${currentTab === item.id ? 'active' : ''}`}
+                  >
+                    <span className="mobile-nav-icon">{item.icon}</span>
+                    <span className="mobile-nav-label">{item.label}</span>
+                    {currentTab === item.id && <span className="mobile-nav-indicator" />}
+                  </button>
+                </li>
+              ))}
+            </ul>
+          </nav>
+        </>
+      )}
     </header>
   );
 }

@@ -38,6 +38,8 @@ export default function DemandsPage({ showNotification, onNavigate }) {
   });
 
   const [editFormData, setEditFormData] = useState({
+    village_id: '',
+    supply_id: '',
     required_quantity: '',
     urgency_level: 'High',
     remarks: '',
@@ -77,8 +79,10 @@ export default function DemandsPage({ showNotification, onNavigate }) {
   const handleOpenEdit = (demand) => {
     setSelectedDemand(demand);
     setEditFormData({
-      required_quantity: demand.required_quantity.toString(),
-      urgency_level: demand.urgency_level,
+      village_id: demand.village_id ? demand.village_id.toString() : '',
+      supply_id: demand.supply_id ? demand.supply_id.toString() : '',
+      required_quantity: demand.required_quantity != null ? demand.required_quantity.toString() : '',
+      urgency_level: demand.urgency_level || 'High',
       remarks: demand.remarks || '',
     });
     setIsEditModalOpen(true);
@@ -122,8 +126,22 @@ export default function DemandsPage({ showNotification, onNavigate }) {
       return;
     }
 
+    const villageId = parseInt(editFormData.village_id, 10);
+    if (isNaN(villageId) || villageId <= 0) {
+      showNotification('error', 'Please select a valid affected village.');
+      return;
+    }
+
+    const supplyId = parseInt(editFormData.supply_id, 10);
+    if (isNaN(supplyId) || supplyId <= 0) {
+      showNotification('error', 'Please select a valid relief supply item.');
+      return;
+    }
+
     setSubmitting(true);
     const payload = {
+      village_id: villageId,
+      supply_id: supplyId,
       required_quantity: qty,
       urgency_level: editFormData.urgency_level,
       remarks: editFormData.remarks.trim() || null,
@@ -131,11 +149,11 @@ export default function DemandsPage({ showNotification, onNavigate }) {
 
     const result = await demandsApi.update(selectedDemand.id, payload);
     if (result.success) {
-      showNotification('success', 'Demand record updated.');
+      showNotification('success', 'Relief demand updated successfully in database!');
       setIsEditModalOpen(false);
       fetchData();
     } else {
-      showNotification('error', result.error || 'Failed to update demand.');
+      showNotification('error', result.error || 'Failed to update demand record.');
     }
     setSubmitting(false);
   };
@@ -254,7 +272,7 @@ export default function DemandsPage({ showNotification, onNavigate }) {
           <table className="data-table">
             <thead>
               <tr>
-                <th>ID</th>
+                <th title="Serial Number">#</th>
                 <th>Affected Village</th>
                 <th>Requested Supply</th>
                 <th>Category</th>
@@ -265,9 +283,13 @@ export default function DemandsPage({ showNotification, onNavigate }) {
               </tr>
             </thead>
             <tbody>
-              {demands.map((d) => (
+              {demands.map((d, index) => (
                 <tr key={d.id} className={d.urgency_level === 'Critical' ? 'row-critical' : ''}>
-                  <td><span className="id-badge">#{d.id}</span></td>
+                  <td>
+                    <span className="id-badge" title={`Database ID: ${d.id}`}>
+                      #{index + 1}
+                    </span>
+                  </td>
                   <td>
                     <div>
                       <strong>{d.village_name || `#${d.village_id}`}</strong>
@@ -436,23 +458,35 @@ export default function DemandsPage({ showNotification, onNavigate }) {
       >
         <form onSubmit={handleEditSubmit} className="modal-form">
           <div className="form-group">
-            <label className="form-label">Village</label>
-            <input
-              type="text"
-              disabled
-              value={selectedDemand?.village_name || ''}
-              className="form-input form-input-disabled"
-            />
+            <label className="form-label">Select Affected Village *</label>
+            <select
+              required
+              value={editFormData.village_id}
+              onChange={(e) => setEditFormData({ ...editFormData, village_id: e.target.value })}
+              className="form-input"
+            >
+              {villages.map((v) => (
+                <option key={v.id} value={v.id}>
+                  {v.name} ({v.district}, {v.state})
+                </option>
+              ))}
+            </select>
           </div>
 
           <div className="form-group">
-            <label className="form-label">Relief Supply</label>
-            <input
-              type="text"
-              disabled
-              value={`${selectedDemand?.supply_name || ''} (${selectedDemand?.supply_unit || ''})`}
-              className="form-input form-input-disabled"
-            />
+            <label className="form-label">Select Relief Supply Item *</label>
+            <select
+              required
+              value={editFormData.supply_id}
+              onChange={(e) => setEditFormData({ ...editFormData, supply_id: e.target.value })}
+              className="form-input"
+            >
+              {supplies.map((s) => (
+                <option key={s.id} value={s.id}>
+                  {s.name} ({s.category} • {s.unit})
+                </option>
+              ))}
+            </select>
           </div>
 
           <div className="form-row">
@@ -463,6 +497,7 @@ export default function DemandsPage({ showNotification, onNavigate }) {
                 step="any"
                 min="0.1"
                 required
+                placeholder="e.g. 200"
                 value={editFormData.required_quantity}
                 onChange={(e) => setEditFormData({ ...editFormData, required_quantity: e.target.value })}
                 className="form-input"
@@ -470,7 +505,7 @@ export default function DemandsPage({ showNotification, onNavigate }) {
             </div>
 
             <div className="form-group">
-              <label className="form-label">Urgency Level *</label>
+              <label className="form-label">Assessed Urgency Level *</label>
               <select
                 value={editFormData.urgency_level}
                 onChange={(e) => setEditFormData({ ...editFormData, urgency_level: e.target.value })}
@@ -486,9 +521,10 @@ export default function DemandsPage({ showNotification, onNavigate }) {
           </div>
 
           <div className="form-group">
-            <label className="form-label">Remarks</label>
+            <label className="form-label">Field Coordinator Remarks (Optional)</label>
             <textarea
               rows={2}
+              placeholder="Details on isolation, road accessibility, or vulnerable demographics"
               value={editFormData.remarks}
               onChange={(e) => setEditFormData({ ...editFormData, remarks: e.target.value })}
               className="form-input"
