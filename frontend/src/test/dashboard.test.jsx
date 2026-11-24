@@ -130,4 +130,40 @@ describe('Dashboard Component (DashboardPage.jsx)', () => {
 
     expect(dashboardApi.getSummary).toHaveBeenCalledTimes(2);
   });
+
+  it('triggers onNavigate for all Quick Management Actions including Optimization and Analytics & Maps', async () => {
+    dashboardApi.getSummary.mockResolvedValue({
+      success: true,
+      data: mockDashboardData,
+    });
+
+    render(<DashboardPage onNavigate={mockOnNavigate} showNotification={mockShowNotification} />);
+
+    await waitFor(() => {
+      expect(screen.getByText('Quick Management Actions')).toBeInTheDocument();
+    });
+
+    // 5 existing management actions
+    fireEvent.click(screen.getByRole('button', { name: /Manage Warehouses/i }));
+    expect(mockOnNavigate).toHaveBeenCalledWith('warehouses');
+
+    fireEvent.click(screen.getByRole('button', { name: /Define Supplies/i }));
+    expect(mockOnNavigate).toHaveBeenCalledWith('supplies');
+
+    fireEvent.click(screen.getByRole('button', { name: /Update Inventory/i }));
+    expect(mockOnNavigate).toHaveBeenCalledWith('inventory');
+
+    fireEvent.click(screen.getByRole('button', { name: /Register Village/i }));
+    expect(mockOnNavigate).toHaveBeenCalledWith('villages');
+
+    fireEvent.click(screen.getByRole('button', { name: /Record Demand/i }));
+    expect(mockOnNavigate).toHaveBeenCalledWith('demands');
+
+    // 2 new approved actions
+    fireEvent.click(screen.getByRole('button', { name: /Run Optimization/i }));
+    expect(mockOnNavigate).toHaveBeenCalledWith('optimization');
+
+    fireEvent.click(screen.getByRole('button', { name: /View Analytics & Maps/i }));
+    expect(mockOnNavigate).toHaveBeenCalledWith('analytics_maps');
+  });
 });

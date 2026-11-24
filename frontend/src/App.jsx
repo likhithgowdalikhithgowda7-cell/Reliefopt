@@ -30,10 +30,6 @@ export default function App() {
 
   // Health check state
   const [status, setStatus] = useState('connecting'); // 'connecting' | 'connected' | 'unavailable'
-  const [healthData, setHealthData] = useState(null);
-  const [error, setError] = useState(null);
-  const [endpointUrl, setEndpointUrl] = useState('');
-  const [isChecking, setIsChecking] = useState(false);
 
   const showNotification = useCallback((type, message) => {
     setNotification({ type, message });
@@ -53,30 +49,21 @@ export default function App() {
       setCurrentTab(validTabs.includes(hash) ? hash : 'landing');
     };
 
-
     window.addEventListener('hashchange', handleHashChange);
     return () => window.removeEventListener('hashchange', handleHashChange);
   }, []);
 
   // Health check polling
   const performHealthCheck = useCallback(async () => {
-    setIsChecking(true);
     setStatus((prev) => (prev === 'connected' ? 'connected' : 'connecting'));
-    setError(null);
 
     const result = await checkBackendHealth(4000);
 
-    setEndpointUrl(result.url);
     if (result.success && result.data && result.data.status === 'healthy') {
       setStatus('connected');
-      setHealthData(result.data);
-      setError(null);
     } else {
       setStatus('unavailable');
-      setHealthData(null);
-      setError(result.error || 'Backend service is unavailable.');
     }
-    setIsChecking(false);
   }, []);
 
   useEffect(() => {
@@ -100,12 +87,6 @@ export default function App() {
       <main className="app-main-content">
         {currentTab === 'landing' && (
           <LandingPage
-            status={status}
-            healthData={healthData}
-            error={error}
-            endpointUrl={endpointUrl}
-            performHealthCheck={performHealthCheck}
-            isChecking={isChecking}
             onExploreDashboard={() => handleSelectTab('dashboard')}
           />
         )}

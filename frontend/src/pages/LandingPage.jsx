@@ -1,34 +1,15 @@
-import React, { useState } from 'react';
+import React from 'react';
 import Hero from '../components/Hero';
 import ProjectOverview from '../components/ProjectOverview';
 import WorkflowPreview from '../components/WorkflowPreview';
 import TechStack from '../components/TechStack';
-import DashboardModal from '../components/DashboardModal';
 
-export default function LandingPage({
-  status,
-  healthData,
-  error,
-  endpointUrl,
-  performHealthCheck,
-  isChecking,
-  onExploreDashboard,
-}) {
-  const [isRoadmapOpen, setIsRoadmapOpen] = useState(false);
-
+export default function LandingPage({ onExploreDashboard }) {
   return (
     <div className="landing-page">
       <main>
         {/* Hero section */}
-        <Hero
-          onExploreDashboard={() => {
-            if (onExploreDashboard) {
-              onExploreDashboard();
-            } else {
-              setIsRoadmapOpen(true);
-            }
-          }}
-        />
+        <Hero onExploreDashboard={onExploreDashboard} />
 
         {/* Core Capabilities */}
         <ProjectOverview />
@@ -39,12 +20,6 @@ export default function LandingPage({
         {/* Technology Foundation */}
         <TechStack />
       </main>
-
-      {/* Development Roadmap Modal */}
-      <DashboardModal
-        isOpen={isRoadmapOpen}
-        onClose={() => setIsRoadmapOpen(false)}
-      />
     </div>
   );
 }

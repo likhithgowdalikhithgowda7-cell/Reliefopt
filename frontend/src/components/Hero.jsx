@@ -38,7 +38,7 @@ export default function Hero({ onExploreDashboard }) {
             </button>
 
             <a href="#workflow" className="btn btn-secondary">
-              <span>View Planned Workflow</span>
+              <span>View Distribution Pipeline</span>
             </a>
           </div>
         </div>

@@ -14,6 +14,7 @@ import {
   Plus,
   Trash2,
   Edit,
+  ArrowLeft,
   ArrowRight,
   Eye,
   Sliders,
@@ -44,6 +45,11 @@ export default function OptimizationPage({ onNavigate, showNotification }) {
   const [currentPlan, setCurrentPlan] = useState(null);
   const [isSolving, setIsSolving] = useState(false);
   const [planLabel, setPlanLabel] = useState('');
+
+  // Historical plan inspection state
+  const [isHistoricalView, setIsHistoricalView] = useState(false);
+  const [inspectingRunId, setInspectingRunId] = useState(null);
+  const [loadingHistoricalPlan, setLoadingHistoricalPlan] = useState(false);
 
   // Transportation cost state
   const [costMatrix, setCostMatrix] = useState(null);
@@ -126,6 +132,7 @@ export default function OptimizationPage({ onNavigate, showNotification }) {
 
   // Execute OR-Tools Solver on live database
   const handleRunOptimization = async () => {
+    setIsHistoricalView(false);
     setIsSolving(true);
     try {
       const res = await optimizationApi.solve(planLabel.trim() || undefined);
@@ -401,16 +408,41 @@ export default function OptimizationPage({ onNavigate, showNotification }) {
     }
   };
 
-  // Load past run into solver view
+  // Load past run into solver view with strict isolation and loading protection
   const handleInspectRun = async (runId) => {
-    const res = await optimizationApi.getRun(runId);
-    if (res.success && res.data) {
-      setCurrentPlan(res.data);
-      setActiveSubTab('solver');
-      window.scrollTo({ top: 300, behavior: 'smooth' });
-    } else {
-      showNotification?.('error', res.error || 'Failed to load historical run.');
+    setLoadingHistoricalPlan(true);
+    setInspectingRunId(runId);
+    setCurrentPlan(null); // Instantly purge previous plan to prevent stale data bleed
+    setIsHistoricalView(true);
+    setActiveSubTab('solver');
+    window.scrollTo({ top: 300, behavior: 'smooth' });
+
+    try {
+      const res = await optimizationApi.getRun(runId);
+      if (res.success && res.data) {
+        setCurrentPlan(res.data);
+      } else {
+        setCurrentPlan(null);
+        setIsHistoricalView(false);
+        showNotification?.('error', res.error || `Failed to load historical run '${runId}'.`);
+      }
+    } catch (err) {
+      setCurrentPlan(null);
+      setIsHistoricalView(false);
+      showNotification?.('error', `Error loading historical run '${runId}': ${err.message || 'Request failed'}`);
+    } finally {
+      setLoadingHistoricalPlan(false);
+      setInspectingRunId(null);
     }
+  };
+
+  // Return from historical inspection mode to live optimization view
+  const handleReturnToLive = () => {
+    setIsHistoricalView(false);
+    setLoadingHistoricalPlan(false);
+    setInspectingRunId(null);
+    setCurrentPlan(null);
+    showNotification?.('info', 'Returned to Live Optimization mode.');
   };
 
   // Delete past run
@@ -419,7 +451,10 @@ export default function OptimizationPage({ onNavigate, showNotification }) {
     const res = await optimizationApi.deleteRun(runId);
     if (res.success) {
       showNotification?.('success', 'Historical plan deleted.');
-      if (currentPlan?.run_id === runId) setCurrentPlan(null);
+      if (currentPlan?.run_id === runId) {
+        setCurrentPlan(null);
+        setIsHistoricalView(false);
+      }
       fetchRuns();
     } else {
       showNotification?.('error', res.error || 'Failed to delete run.');
@@ -430,6 +465,7 @@ export default function OptimizationPage({ onNavigate, showNotification }) {
   const handleRunSimulation = async (e) => {
     e.preventDefault();
     setScenarioModalOpen(false);
+    setIsHistoricalView(false);
     setIsSolving(true);
 
     // Build temporary override if warehouses exist
@@ -506,7 +542,16 @@ export default function OptimizationPage({ onNavigate, showNotification }) {
               <Sparkles size={16} color="var(--primary-600)" />
               <span>Load Disaster Scenario</span>
             </button>
-            {currentPlan && (
+            {isHistoricalView ? (
+              <button
+                onClick={handleReturnToLive}
+                className="btn btn-secondary"
+                style={{ padding: '10px 20px', gap: '8px', fontSize: '0.95rem' }}
+              >
+                <ArrowLeft size={16} />
+                <span>Back to Live Optimization</span>
+              </button>
+            ) : currentPlan ? (
               <button
                 onClick={handleRunOptimization}
                 disabled={isSolving || (overview && !overview.is_ready_to_solve)}
@@ -516,38 +561,62 @@ export default function OptimizationPage({ onNavigate, showNotification }) {
                 <Play size={16} fill="currentColor" />
                 <span>{isSolving ? 'Solving with OR-Tools...' : 'Generate Allocation Plan'}</span>
               </button>
-            )}
+            ) : null}
           </div>
         </div>
 
         {/* Readiness Overview Banner */}
         {overview && (
           <div className="overview-stats-card" style={{ marginBottom: '24px' }}>
+            {isHistoricalView && (
+              <div
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  padding: '10px 14px',
+                  marginBottom: '14px',
+                  background: '#f8fafc',
+                  borderRadius: 'var(--radius-sm)',
+                  border: '1px solid #cbd5e1',
+                  fontSize: '0.84rem',
+                }}
+              >
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                  <span className="badge" style={{ background: '#334155', color: '#f8fafc', fontWeight: '700', fontSize: '0.78rem' }}>
+                    Current Live Data
+                  </span>
+                  <span style={{ color: 'var(--navy-700)', fontWeight: '500' }}>
+                    Notice: Metrics below reflect current PostgreSQL warehouse readiness, not conditions from the inspected historical snapshot.
+                  </span>
+                </div>
+              </div>
+            )}
             <div className="metrics-grid" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: '14px' }}>
               <div className="metric-card">
-                <span className="metric-label"><Boxes size={14} /> Available Stock</span>
+                <span className="metric-label"><Boxes size={14} /> {isHistoricalView ? 'Live Available Stock' : 'Available Stock'}</span>
                 <span className="metric-value">{overview.total_available_inventory}</span>
                 <span className="metric-subtext">Verified warehouse units</span>
               </div>
               <div className="metric-card">
-                <span className="metric-label"><MapPin size={14} /> Total Demand</span>
+                <span className="metric-label"><MapPin size={14} /> {isHistoricalView ? 'Live Recorded Demand' : 'Total Demand'}</span>
                 <span className="metric-value">{overview.total_recorded_demand}</span>
-                <span className="metric-subtext">Requested by villages</span>
+                <span className="metric-subtext">{isHistoricalView ? 'Current recorded demand' : 'Requested by villages'}</span>
               </div>
               <div className="metric-card">
-                <span className="metric-label"><AlertTriangle size={14} color="#dc2626" /> Critical Demands</span>
+                <span className="metric-label"><AlertTriangle size={14} color="#dc2626" /> {isHistoricalView ? 'Live Critical Demands' : 'Critical Demands'}</span>
                 <span className="metric-value" style={{ color: overview.critical_demands_count > 0 ? '#dc2626' : 'inherit' }}>
                   {overview.critical_demands_count}
                 </span>
                 <span className="metric-subtext">Top humanitarian priority</span>
               </div>
               <div className="metric-card">
-                <span className="metric-label"><Warehouse size={14} /> Warehouses</span>
+                <span className="metric-label"><Warehouse size={14} /> {isHistoricalView ? 'Live Warehouses' : 'Warehouses'}</span>
                 <span className="metric-value">{overview.active_warehouses_count}</span>
                 <span className="metric-subtext">Active supply sources</span>
               </div>
               <div className="metric-card">
-                <span className="metric-label"><Truck size={14} /> Cost Coverage</span>
+                <span className="metric-label"><Truck size={14} /> {isHistoricalView ? 'Live Cost Coverage' : 'Cost Coverage'}</span>
                 <span className="metric-value" style={{ color: overview.missing_costs_count > 0 ? '#d97706' : '#16a34a' }}>
                   {overview.configured_costs_count} / {overview.total_pairs_count}
                 </span>
@@ -587,7 +656,15 @@ export default function OptimizationPage({ onNavigate, showNotification }) {
           >
             <Cpu size={15} />
             <span>Allocation Engine</span>
-            {currentPlan && <span className="tab-count" style={{ background: '#16a34a', color: '#fff' }}>Plan Ready</span>}
+            {loadingHistoricalPlan ? (
+              <span className="tab-count" style={{ background: '#d97706', color: '#fff' }}>Loading Plan...</span>
+            ) : currentPlan ? (
+              isHistoricalView ? (
+                <span className="tab-count" style={{ background: '#2563eb', color: '#fff' }}>Historical Plan</span>
+              ) : (
+                <span className="tab-count" style={{ background: '#16a34a', color: '#fff' }}>Plan Ready</span>
+              )
+            ) : null}
           </button>
           <button
             onClick={() => setActiveSubTab('costs')}
@@ -612,7 +689,17 @@ export default function OptimizationPage({ onNavigate, showNotification }) {
         {/* ========================================================= */}
         {activeSubTab === 'solver' && (
           <div>
-            {!currentPlan ? (
+            {loadingHistoricalPlan ? (
+              <div className="card" style={{ padding: '60px 20px', textAlign: 'center' }}>
+                <div className="loading-spinner" style={{ margin: '0 auto 16px auto', width: '36px', height: '36px' }} />
+                <h3 style={{ fontSize: '1.2rem', fontWeight: '700', color: 'var(--navy-900)', marginBottom: '8px' }}>
+                  Loading Historical Optimization Plan...
+                </h3>
+                <p style={{ color: 'var(--navy-600)', fontSize: '0.9rem', maxWidth: '480px', margin: '0 auto' }}>
+                  Fetching saved dispatch allocations, warehouse inventory usage, and fairness metrics for <strong>{inspectingRunId}</strong>.
+                </p>
+              </div>
+            ) : !currentPlan ? (
               <div className="card" style={{ padding: '40px', textAlign: 'center' }}>
                 <div style={{ maxWidth: '540px', margin: '0 auto' }}>
                   <div style={{ width: '64px', height: '64px', borderRadius: '50%', background: 'var(--primary-50)', color: 'var(--primary-600)', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', marginBottom: '16px' }}>
@@ -639,8 +726,50 @@ export default function OptimizationPage({ onNavigate, showNotification }) {
               </div>
             ) : (
               <div>
+                {/* Historical Inspection Mode Banner */}
+                {isHistoricalView && (
+                  <div
+                    className="card"
+                    style={{
+                      marginBottom: '20px',
+                      padding: '16px 20px',
+                      background: 'linear-gradient(135deg, #eff6ff 0%, #f8fafc 100%)',
+                      border: '1px solid #bfdbfe',
+                      borderLeft: '5px solid #2563eb',
+                      display: 'flex',
+                      justifyContent: 'space-between',
+                      alignItems: 'center',
+                      flexWrap: 'wrap',
+                      gap: '14px',
+                    }}
+                  >
+                    <div>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
+                        <span className="badge" style={{ background: '#dbeafe', color: '#1e40af', fontWeight: '700', fontSize: '0.8rem' }}>
+                          Historical Plan Inspection (Read-Only)
+                        </span>
+                        <span style={{ fontSize: '0.98rem', fontWeight: '700', color: 'var(--navy-900)' }}>
+                          {currentPlan.scenario_name ? `${currentPlan.scenario_name} (${currentPlan.run_id})` : currentPlan.run_id}
+                        </span>
+                      </div>
+                      <div style={{ fontSize: '0.84rem', color: 'var(--navy-600)', lineHeight: '1.4' }}>
+                        Viewing saved results generated on <strong>{new Date(currentPlan.created_at).toLocaleString()}</strong>.
+                        All allocations, route costs, and fulfilment rates belong exclusively to this historical snapshot.
+                      </div>
+                    </div>
+                    <button
+                      onClick={handleReturnToLive}
+                      className="btn btn-secondary"
+                      style={{ padding: '8px 16px', fontSize: '0.85rem', gap: '6px' }}
+                    >
+                      <ArrowLeft size={14} />
+                      <span>Back to Live Optimization</span>
+                    </button>
+                  </div>
+                )}
+
                 {/* Result Status Banner */}
-                <div className="card" style={{ marginBottom: '20px', padding: '16px 20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '12px', borderLeft: '4px solid #16a34a' }}>
+                <div className="card" style={{ marginBottom: '20px', padding: '16px 20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '12px', borderLeft: isHistoricalView ? '4px solid #2563eb' : '4px solid #16a34a' }}>
                   <div>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
                       <span className="badge" style={{ background: '#dcfce7', color: '#166534', fontWeight: '700', fontSize: '0.85rem' }}>
@@ -648,7 +777,7 @@ export default function OptimizationPage({ onNavigate, showNotification }) {
                         {currentPlan.status}
                       </span>
                       <span style={{ fontWeight: '700', color: 'var(--navy-900)', fontSize: '1.05rem' }}>
-                        {currentPlan.is_scenario ? `Scenario: ${currentPlan.scenario_name}` : `Run ID: ${currentPlan.run_id}`}
+                        {currentPlan.scenario_name ? `${currentPlan.scenario_name} (${currentPlan.run_id})` : `Run ID: ${currentPlan.run_id}`}
                       </span>
                     </div>
                     <span style={{ fontSize: '0.82rem', color: 'var(--navy-500)', marginTop: '4px', display: 'block' }}>
@@ -656,14 +785,23 @@ export default function OptimizationPage({ onNavigate, showNotification }) {
                     </span>
                   </div>
                   <div style={{ display: 'flex', gap: '10px' }}>
-                    <button onClick={handleRunOptimization} disabled={isSolving} className="btn btn-secondary" style={{ padding: '8px 14px', fontSize: '0.85rem' }}>
-                      <RotateCcw size={14} />
-                      <span>Re-solve</span>
-                    </button>
-                    <button onClick={() => setScenarioModalOpen(true)} className="btn btn-secondary" style={{ padding: '8px 14px', fontSize: '0.85rem' }}>
-                      <Sliders size={14} />
-                      <span>Simulate What-If</span>
-                    </button>
+                    {isHistoricalView ? (
+                      <button onClick={handleReturnToLive} className="btn btn-secondary" style={{ padding: '8px 14px', fontSize: '0.85rem', gap: '6px' }}>
+                        <ArrowLeft size={14} />
+                        <span>Back to Live Optimization</span>
+                      </button>
+                    ) : (
+                      <>
+                        <button onClick={handleRunOptimization} disabled={isSolving} className="btn btn-secondary" style={{ padding: '8px 14px', fontSize: '0.85rem' }}>
+                          <RotateCcw size={14} />
+                          <span>Re-solve</span>
+                        </button>
+                        <button onClick={() => setScenarioModalOpen(true)} className="btn btn-secondary" style={{ padding: '8px 14px', fontSize: '0.85rem' }}>
+                          <Sliders size={14} />
+                          <span>Simulate What-If</span>
+                        </button>
+                      </>
+                    )}
                   </div>
                 </div>
 

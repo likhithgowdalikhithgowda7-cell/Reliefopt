@@ -67,6 +67,37 @@ describe('Demand Management (DemandsPage.jsx)', () => {
     expect(screen.getAllByText('Critical')[0]).toBeInTheDocument();
   });
 
+  it('applies row-critical class to table rows with Critical urgency', async () => {
+    const multiDemands = [
+      ...mockDemands,
+      {
+        id: 102,
+        village_id: 7,
+        village_name: 'Ahatguri Flood Relief Camp',
+        supply_id: 2,
+        supply_name: 'Ready-to-Eat Food Kits',
+        supply_category: 'Food',
+        required_quantity: 300,
+        urgency_level: 'High',
+        remarks: 'Supplementary ration',
+        created_at: '2026-11-22T10:00:00Z',
+      },
+    ];
+    demandsApi.list.mockResolvedValue({ success: true, data: multiDemands });
+    villagesApi.list.mockResolvedValue({ success: true, data: mockVillages });
+    suppliesApi.list.mockResolvedValue({ success: true, data: mockSupplies });
+
+    const { container } = render(<DemandsPage showNotification={mockShowNotification} onNavigate={mockOnNavigate} />);
+
+    await waitFor(() => {
+      expect(screen.getByText('Water Purification Tablets')).toBeInTheDocument();
+    });
+
+    const rows = container.querySelectorAll('.data-table tbody tr');
+    expect(rows[0]).toHaveClass('row-critical');
+    expect(rows[1]).not.toHaveClass('row-critical');
+  });
+
   it('filtering by urgency triggers API fetch with correct urgency parameter', async () => {
     demandsApi.list.mockResolvedValue({ success: true, data: mockDemands });
     villagesApi.list.mockResolvedValue({ success: true, data: mockVillages });

@@ -71,17 +71,10 @@ describe('Navigation Components', () => {
     });
   });
 
-  describe('LandingPage Navigation & Health Status', () => {
+  describe('LandingPage Navigation', () => {
     it('renders hero title and triggers dashboard navigation callback', () => {
       const mockExplore = vi.fn();
-      render(
-        <LandingPage
-          status="connected"
-          healthData={{ status: 'healthy', database: 'connected' }}
-          endpointUrl="http://127.0.0.1:8000/health"
-          onExploreDashboard={mockExplore}
-        />
-      );
+      render(<LandingPage onExploreDashboard={mockExplore} />);
 
       const heroHeading = screen.getByRole('heading', { level: 1 });
       expect(heroHeading).toBeInTheDocument();
@@ -89,6 +82,14 @@ describe('Navigation Components', () => {
       const exploreBtn = screen.getByRole('button', { name: /Explore.*Dashboard/i });
       fireEvent.click(exploreBtn);
       expect(mockExplore).toHaveBeenCalled();
+    });
+
+    it('renders secondary CTA link to distribution pipeline workflow section', () => {
+      render(<LandingPage onExploreDashboard={vi.fn()} />);
+
+      const pipelineLink = screen.getByRole('link', { name: /View Distribution Pipeline/i });
+      expect(pipelineLink).toBeInTheDocument();
+      expect(pipelineLink).toHaveAttribute('href', '#workflow');
     });
   });
 });

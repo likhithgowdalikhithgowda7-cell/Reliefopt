@@ -1244,7 +1244,11 @@
 }
 
 .row-critical {
-  background: #fffbfc;
+  background-color: #fef2f2 !important;
+}
+
+.row-critical:hover {
+  background-color: #fee2e2 !important;
 }
 
 /* Badges */

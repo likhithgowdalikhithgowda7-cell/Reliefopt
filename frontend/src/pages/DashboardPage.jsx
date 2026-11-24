@@ -9,6 +9,8 @@ import {
   RefreshCw,
   Plus,
   ArrowRight,
+  Cpu,
+  Map,
 } from 'lucide-react';
 import { dashboardApi } from '../services/api';
 import EmptyState from '../components/EmptyState';
@@ -230,6 +232,14 @@ export default function DashboardPage({ onNavigate, showNotification }) {
               <button onClick={() => onNavigate('demands')} className="btn btn-primary btn-sm">
                 <Plus size={14} />
                 <span>Record Demand</span>
+              </button>
+              <button onClick={() => onNavigate('optimization')} className="btn btn-secondary btn-sm">
+                <Cpu size={14} />
+                <span>Run Optimization</span>
+              </button>
+              <button onClick={() => onNavigate('analytics_maps')} className="btn btn-secondary btn-sm">
+                <Map size={14} />
+                <span>View Analytics & Maps</span>
               </button>
             </div>
           </div>
